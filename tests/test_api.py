@@ -1,33 +1,66 @@
+from email.policy import default
+from http import HTTPStatus
+
+import pytest
 import requests
 import json
+
+from fastapi_pagination import response
 from jsonschema import validate
 
 
-class TestUser:
+@pytest.fixture
+def users(app_url):
+  response = requests.get(f"{app_url}/api/users/")
+  assert response.status_code == HTTPStatus.OK
+  return response.json()
 
-  # base_url = 'https://reqres.in/api/users'
-  base_url = "http://localhost/users"
-  headers = {"x-api-key": "reqres-free-v1"}
+#headers = {"x-api-key": "reqres-free-v1"}
 
-  def test_get_list_users(self):
-    user_id = "2"
-    response = requests.get(
-    self.base_url + f"/{user_id}",
-    headers= self.headers
-    )
+@pytest.mark.parametrize("user_id", [2, 7, 8])
+def test_get_user(app_url, user_id):
+  response = requests.get(f"{app_url}/api/users/{user_id}")
 
-    assert response.status_code == 200
-    assert response.json()['data']['id'] == 2
-    with open("tests\get_user.json") as file:
-      validate(response.json(), schema=json.loads(file.read()))
+  assert response.status_code == 200
+  assert response.json()['data']['id'] == user_id
+  with open("get_user.json") as file:
+    validate(response.json(), schema=json.loads(file.read()))
 
-  def test_get_failed_user(self):
-    user_id = "223"
-    response = requests.get(
-    self.base_url + f"/{user_id}",
-    headers=self.headers
-    )
+@pytest.mark.parametrize("user_id", [223, 444, 555])
+def test_get_failed_user(app_url, user_id):
+  response = requests.get(f"{app_url}/api/users/{user_id}")
 
-    assert response.status_code == 404
+  assert response.status_code == HTTPStatus.NOT_FOUND
 
+def test_users_no_duplicates(users):
+  user_id = [user["id"] for user in users]
+  assert len(users) == len(set(user_id))
 
+# TODO move to config default_pagination and move p
+def test_pagination_work(app_url, default_pagination=5):
+  response = requests.get(f"{app_url}/api/users")
+
+  assert response.status_code == HTTPStatus.OK
+  assert len(response.json()) == default_pagination
+
+def test_pagination_pages(app_url):
+  first_page = requests.get(f"{app_url}/api/users/?page=1&size=5")
+  second_page = requests.get(f"{app_url}/api/users/?page=2&size=5")
+
+  assert first_page.status_code == HTTPStatus.OK
+  assert second_page.status_code == HTTPStatus.OK
+  assert first_page.json() != second_page.json()
+
+@pytest.mark.parametrize("size, expected_page_count", [
+    (4, 3),  # 12 users, size=4 => 3 pages
+    (2, 6),  # 12 users, size=2 => 2 pages
+    (5, 3),  # 12 users, size=5 => 3 pages
+])
+def test_pagination_page_count(app_url, size, expected_page_count):
+  response = requests.get(f"{app_url}/api/users/?size={size}")
+
+  assert response.status_code == HTTPStatus.OK
+  data = response.json()
+  assert data["total"] == 12  # Total 12 users
+  assert data["size"] == size
+  assert data["pages"] == expected_page_count
