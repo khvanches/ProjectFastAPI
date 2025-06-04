@@ -1,7 +1,7 @@
 from pydantic import BaseModel
-from models.user_data import UserData
-from models.support_data import SupportData
+from .user import User
+from .support_data import SupportData
 
 class UserResponse(BaseModel):
-    data: UserData
+    data: User
     support: SupportData = SupportData()
