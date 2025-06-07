@@ -7,3 +7,12 @@ class User(SQLModel, table=True):
     first_name: str
     last_name: str
     avatar: str
+
+class UserUpdate(SQLModel):
+    email: EmailStr | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    avatar: str | None = None
+
+class UserCreate(SQLModel):
+    pass

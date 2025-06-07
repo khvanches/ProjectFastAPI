@@ -1,47 +1,75 @@
-from email.policy import default
 from http import HTTPStatus
 
 import pytest
 import requests
 import json
 
-from fastapi_pagination import response
-from jsonschema import validate
+from app.models.user import User
 
+
+@pytest.fixture(scope="module")
+def fill_test_data(app_url):
+  with open("users.json") as f:
+    test_data_users = json.load(f)
+  api_users=[]
+
+  for user in test_data_users:
+    resp = requests.post(f"{app_url}/api/users", json=user)
+    api_users.append(resp.json())
+
+  user_ids = [user["id"] for user in api_users]
+
+  yield user_ids
+
+  for user_id in user_ids:
+    requests.delete(f"{app_url}/api/users/{user_id}")
 
 @pytest.fixture
 def users(app_url):
-  response = requests.get(f"{app_url}/api/users/")
-  assert response.status_code == HTTPStatus.OK
-  return response.json()
+    response = requests.get(f"{app_url}/api/users/")
+    assert response.status_code == HTTPStatus.OK
+    return response.json()["items"]
 
-#headers = {"x-api-key": "reqres-free-v1"}
+#"???
+@pytest.fixture
+def test_user(app_url):
+  with open("users.json") as f:
+    user = json.load(f)
+  return user
 
-@pytest.mark.parametrize("user_id", [2, 7, 8])
-def test_get_user(app_url, user_id):
-  response = requests.get(f"{app_url}/api/users/{user_id}")
+@pytest.mark.usefixtures("fill_test_data")
+def test_get_users(app_url):
+  resp = requests.get(f"{app_url}/api/users/")
+  assert resp.status_code == HTTPStatus.OK
 
-  assert response.status_code == 200
-  assert response.json()['data']['id'] == user_id
-  with open("get_user.json") as file:
-    validate(response.json(), schema=json.loads(file.read()))
+  users_list = resp.json()["items"]
+  for user in users_list:
+    User.model_validate(user)
 
-@pytest.mark.parametrize("user_id", [223, 444, 555])
+def test_get_user(app_url, fill_test_data):
+  for user_id in (fill_test_data[0], fill_test_data[-1]):
+    resp = requests.get(f"{app_url}/api/users/{user_id}")
+    assert resp.status_code == HTTPStatus.OK
+    User.model_validate(resp.json())
+
+
+@pytest.mark.parametrize("user_id", [-1, 00, "dsdsd"])
 def test_get_failed_user(app_url, user_id):
-  response = requests.get(f"{app_url}/api/users/{user_id}")
+  resp = requests.get(f"{app_url}/api/users/{user_id}")
 
-  assert response.status_code == HTTPStatus.NOT_FOUND
+  assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
-def test_users_no_duplicates(users):
-  user_id = [user["id"] for user in users]
-  assert len(users) == len(set(user_id))
+def test_users_no_duplicates(users, fill_test_data):
+  assert len(users) == len(set(fill_test_data))
+
 
 # TODO move to config default_pagination and move p
-def test_pagination_work(app_url, default_pagination=5):
-  response = requests.get(f"{app_url}/api/users")
+def test_pagination_work(app_url, fill_test_data):
+  resp = requests.get(f"{app_url}/api/users")
 
-  assert response.status_code == HTTPStatus.OK
-  assert len(response.json()) == default_pagination
+  assert resp.status_code == HTTPStatus.OK
+  assert len(resp.json()["items"]) == len(fill_test_data)
+
 
 def test_pagination_pages(app_url):
   first_page = requests.get(f"{app_url}/api/users/?page=1&size=5")
@@ -51,16 +79,17 @@ def test_pagination_pages(app_url):
   assert second_page.status_code == HTTPStatus.OK
   assert first_page.json() != second_page.json()
 
-@pytest.mark.parametrize("size, expected_page_count", [
-    (4, 3),  # 12 users, size=4 => 3 pages
-    (2, 6),  # 12 users, size=2 => 2 pages
-    (5, 3),  # 12 users, size=5 => 3 pages
-])
-def test_pagination_page_count(app_url, size, expected_page_count):
-  response = requests.get(f"{app_url}/api/users/?size={size}")
+def test_create_user(app_url, test_user):
+  resp = requests.post(f"{app_url}/api/users", json=test_user)
+  assert resp.status_code == HTTPStatus.CREATED
 
-  assert response.status_code == HTTPStatus.OK
-  data = response.json()
-  assert data["total"] == 12  # Total 12 users
-  assert data["size"] == size
-  assert data["pages"] == expected_page_count
+  resp_new_user = requests.get(f"{app_url}/api/users{resp.json()['id']}")
+  assert resp_new_user.status_code == HTTPStatus.OK
+  assert resp_new_user.json()["first_name"] == test_user["first_name"]
+
+
+def test_update_user(app_url, fill_test_data):
+  new_id = fill_test_data[-1] + 1
+  resp = requests.get(f"{app_url}/api/user/{new_id}")
+  user = resp.json()
+
