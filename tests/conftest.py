@@ -11,4 +11,6 @@ def envs():
 def app_url():
     return os.getenv("APP_URL")
 
-
+@pytest.fixture
+def default_pagination():
+    return int(os.getenv("DEFAULT_PAGINATION"))

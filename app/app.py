@@ -1,7 +1,10 @@
 from http import HTTPStatus
 
+import dotenv
 import uvicorn
 import json
+import os
+
 from fastapi import FastAPI, Response, status, Query
 from fastapi_pagination import Page as BasePage, add_pagination, paginate
 from fastapi_pagination.customization import UseParamsFields, CustomizedPage
@@ -10,11 +13,14 @@ from models.user_data import UserData
 from models.status import Status
 from models.user_response import UserResponse
 
+
+dotenv.load_dotenv()
+
 # ?page=1&size=5
 Page = CustomizedPage[
     BasePage,
     UseParamsFields(
-        size=Query(5, ge=0),
+        size=Query(os.getenv("DEFAULT_PAGINATION"), ge=0),
     ),
 ]
 
@@ -27,7 +33,7 @@ users = list[UserData]
 async def get_status() -> Status:
     return  Status(users=bool(users))
 
-@app.get('/api/users/{user_id}', status_code=200)
+@app.get('/api/users/{user_id}', status_code=200 )
 async def get_user(user_id: int, response: Response) -> UserResponse | dict[str, str]:
 
     for user in users:

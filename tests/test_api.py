@@ -4,8 +4,8 @@ from http import HTTPStatus
 import pytest
 import requests
 import json
+import math
 
-from fastapi_pagination import response
 from jsonschema import validate
 
 
@@ -13,9 +13,15 @@ from jsonschema import validate
 def users(app_url):
   response = requests.get(f"{app_url}/api/users/")
   assert response.status_code == HTTPStatus.OK
-  return response.json()
 
-#headers = {"x-api-key": "reqres-free-v1"}
+  users = []
+  data = response.json()
+  for i in range(1,data["pages"]+1):
+    response = requests.get(f"{app_url}/api/users/?page={i}")
+    for item in response.json()["items"]:
+      users.append(item)
+  return users
+
 
 @pytest.mark.parametrize("user_id", [2, 7, 8])
 def test_get_user(app_url, user_id):
@@ -36,12 +42,16 @@ def test_users_no_duplicates(users):
   user_id = [user["id"] for user in users]
   assert len(users) == len(set(user_id))
 
-# TODO move to config default_pagination and move p
-def test_pagination_work(app_url, default_pagination=5):
+def test_pagination_work(app_url, default_pagination, users):
   response = requests.get(f"{app_url}/api/users")
 
   assert response.status_code == HTTPStatus.OK
-  assert len(response.json()) == default_pagination
+  data = response.json()
+  assert len(data['items']) == default_pagination
+  assert data['total'] == len(users)
+  assert data['page'] == 1
+  assert data['pages'] == math.ceil(len(users)/default_pagination)
+  assert data['size'] == default_pagination
 
 def test_pagination_pages(app_url):
   first_page = requests.get(f"{app_url}/api/users/?page=1&size=5")
@@ -49,18 +59,20 @@ def test_pagination_pages(app_url):
 
   assert first_page.status_code == HTTPStatus.OK
   assert second_page.status_code == HTTPStatus.OK
-  assert first_page.json() != second_page.json()
 
-@pytest.mark.parametrize("size, expected_page_count", [
-    (4, 3),  # 12 users, size=4 => 3 pages
-    (2, 6),  # 12 users, size=2 => 2 pages
-    (5, 3),  # 12 users, size=5 => 3 pages
-])
-def test_pagination_page_count(app_url, size, expected_page_count):
+  items_1 = first_page.json()["items"]
+  items_2 = second_page.json()["items"]
+
+  assert items_1 != items_2
+  assert not all(i1 == i2 for i1, i2 in zip(items_1, items_2))
+
+
+@pytest.mark.parametrize("size", [3, 5, 8] )
+def test_pagination_page_count(app_url, users, size):
   response = requests.get(f"{app_url}/api/users/?size={size}")
-
   assert response.status_code == HTTPStatus.OK
+
   data = response.json()
-  assert data["total"] == 12  # Total 12 users
+  assert data["total"] == len(users)  # Total 12 users
   assert data["size"] == size
-  assert data["pages"] == expected_page_count
+  assert data["pages"] == math.ceil(len(users)/size)
