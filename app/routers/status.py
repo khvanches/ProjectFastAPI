@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fastapi import APIRouter
 
 from app.models.status import Status
-from database.engine import check_availability
+from app.database.engine import check_availability
 
 router = APIRouter()
 

@@ -1,0 +1,31 @@
+{
+  "valid_user": {
+    "email": "test.user@reqres.in",
+    "first_name": "Test",
+    "last_name": "User",
+    "avatar": "https://reqres.in/img/faces/2-image.jpg"
+  },
+  "change_user": {
+    "email": "updated.user@example.com",
+    "first_name": "Updated",
+    "last_name": "User",
+    "avatar": "https://example.com/new_avatar.png"
+  },
+  "bad_email_user" : {
+    "email": "email",
+    "first_name": "bad_email_user",
+    "last_name": "bad_email_user",
+    "avatar": "https://reqres.in/img/faces/2-image.jpg"
+  },
+  "bad_url_user" : {
+    "email": "bad_url_user@example.com",
+    "first_name": "bad_url_user",
+    "last_name": "bad_url_user",
+    "avatar": "bad_url_user"
+  },
+  "incomplete_user" : {
+          "email": "test@example.com",
+        "first_name": "Test",
+        "avatar": "https://example.com/avatar.png"
+  }
+}

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 
 from fastapi_pagination import add_pagination
 from routers import status, users
-from database.engine import create_db_and_tables
+from app.database.engine import create_db_and_tables
 
 
 app = FastAPI()

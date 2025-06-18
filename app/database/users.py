@@ -1,6 +1,6 @@
-from http import HTTPStatus
-from http.client import HTTPException
 from typing import Iterable, Type
+from http import HTTPStatus
+from fastapi import HTTPException
 
 from sqlmodel import Session, select
 from .engine import engine
@@ -27,17 +27,19 @@ def create_user(user: User) -> User:
 
 def delete_user(user_id: int) -> User | None:
     with Session(engine) as session:
-        user = session.get(User, user_id)
-        session.delete(user)
+        db_user = session.get(User, user_id)
+        if not db_user:
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="User not found")
+        session.delete(db_user)
         session.commit()
-        return user
+        return db_user
 
-def update_user(user_id: int, user: User) -> User | None:
+def update_user(user_id: int, user: User) -> Type[User]:
     with Session(engine) as session:
         db_user = session.get(User, user_id)
         if not db_user:
-            raise HTTPException(status_code=404, detail="User not found")
-        user_data = user.model_update(exclude_unset=True)
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="User not found")
+        user_data = user.model_dump(exclude_unset=True)
         db_user.sqlmodel_update(user_data)
         session.add(db_user)
         session.commit()
