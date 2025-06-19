@@ -5,19 +5,19 @@ description = ""
 authors = [
     {name = "khvanches",email = "khvanches@gmail.com"}
 ]
-readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4.0"
 dependencies = [
     "requests (>=2.32.3,<3.0.0)",
     "jsonschema (>=4.24.0,<5.0.0)",
     "uvicorn (>=0.34.2,<0.35.0)",
     "fastapi (>=0.115.12,<0.116.0)",
-    "pydantic (>=2.11.5,<3.0.0)",
+    "pydantic[email] (>=2.11.7,<3.0.0)",
     "pytest (>=8.3.5,<9.0.0)",
     "dotenv (>=0.9.9,<0.10.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "sqlalchemy (>=2.0.41,<3.0.0)",
-    "sqlmodel (>=0.0.24,<0.0.25)"
+    "sqlmodel (>=0.0.24,<0.0.25)",
+    "fastapi-pagination (>=0.13.2,<0.14.0)"
 ]
 
 
