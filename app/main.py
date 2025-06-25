@@ -13,7 +13,7 @@ from app.routers import status, users
 from app.database.engine import create_db_and_tables
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     logging.warning("On startup")
     create_db_and_tables()
     yield
