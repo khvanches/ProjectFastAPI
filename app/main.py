@@ -20,7 +20,7 @@ async def lifespan(_: FastAPI):
     logging.warning("On shutdown")
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.include_router(status.router)
 app.include_router(users.router)
 add_pagination(app)
